@@ -1,0 +1,245 @@
+import asyncio
+from gc import get_objects
+import random
+
+from pyrogram.enums import ChatType
+from pyrogram import *
+from pyrogram.types import *
+from asyncio import sleep
+from pyrogram.errors.exceptions import FloodWait
+
+from userbot import *
+from userbot.core.database.setvar import *
+from userbot.config import *
+from userbot.core.function.emoji import emoji
+
+__MODULE__ = "gcast"
+__HELP__ = f"""
+<b>『 bantuan untuk gcast 』</b>
+
+  <b>• perintah:</b> <code>{PREFIX[0]}uc</code> [text/reply to text/media]
+  <b>• penjelasan:</b> untuk mengirim pesan ke semua user
+
+  <b>• perintah:</b> <code>{PREFIX[0]}gcast</code> [text/reply to text/media]
+  <b>• penjelasan:</b> untuk mengirim pesan ke semua group
+
+  <b>• perintah:</b> <code>{PREFIX[0]}bgcast</code> [text/reply to text/media]
+  <b>• penjelasan:</b> untuk mengirim pesan ke semua group
+
+  <b>• perintah:</b> <code>{PREFIX[0]}spamg</code> [jumlah_pesan - rep_pesan]
+  <b>• penjelasan:</b> untuk spam pesan gcast
+
+  <b>• perintah:</b> <code>{PREFIX[0]}send</code> [userid/username - text/reply]
+  <b>• penjelasan:</b> untuk mengirim pesan ke user/group/channeld
+
+  <b>gcast: untuk menggunakan button, gunakan format:</b>
+  <code>text ~> button_text:button_url</code>
+"""
+
+def get_message(message):
+    msg = (
+        message.reply_to_message
+        if message.reply_to_message
+        else ""
+        if len(message.command) < 2
+        else " ".join(message.command[1:])
+    )
+    return msg
+
+async def get_broadcast_id(client, query):
+    chats = []
+    chat_types = {
+        "group": [ChatType.GROUP, ChatType.SUPERGROUP],
+        "users": [ChatType.PRIVATE],
+    }
+    async for dialog in client.get_dialogs():
+        if dialog.chat.type in chat_types[query]:
+            chats.append(dialog.chat.id)
+
+    return chats
+
+async def get_broadcast_id(client, query):
+    chats = []
+    chat_types = {
+        "group": [ChatType.GROUP, ChatType.SUPERGROUP],
+        "users": [ChatType.PRIVATE],
+    }
+    async for dialog in client.get_dialogs():
+        if dialog.chat.type in chat_types[query]:
+            chats.append(dialog.chat.id)
+
+    return chats
+  
+  #gcast
+
+@CB.UBOT("gikes")
+async def broadcast_group_cmd(client, message):
+    msg = await message.reply(emoji("proses") + f"sᴇᴅᴀɴɢ ᴍᴇᴍᴘʀᴏsᴇs ᴍᴏʜᴏɴ ʙᴇʀsᴀʙᴀʀ...")
+
+    send = get_message(message)
+    if not send:
+        return await msg.edit(emoji("gagal") + f"ᴍᴏʜᴏɴ ʙᴀʟᴀs sᴇsᴜᴀᴛᴜ ᴀᴛᴀᴜ ᴋᴇᴛɪᴋ sᴇsᴜᴀᴛᴜ!.")
+
+    chats = await get_broadcast_id(client, "group")
+    blacklist = await get_chat(client.me.id)
+
+    done = 0
+    for chat_id in chats:
+        if chat_id in blacklist:
+            continue
+        elif chat_id in BLACKLIST_CHAT:
+            continue
+
+        try:
+            if message.reply_to_message:
+                await send.copy(chat_id)
+            else:
+                await client.send_message(chat_id, send)
+            done += 1
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+            if message.reply_to_message:
+                await send.copy(chat_id)
+            else:
+                await client.send_message(chat_id, send)
+            done += 1
+        except Exception:
+            pass
+
+    return await msg.edit(f"📊 ᴘᴇsᴀɴ ʙʀᴏᴀᴅᴄᴀsᴛ ᴀɴᴅᴀ ᴛᴇʀᴋɪʀɪᴍ ᴋᴇ `{done}` ɢʀᴏᴜᴘ" + emoji("done"))    
+  
+@CB.UBOT("bgcast")
+async def _(client, message: Message):
+    sent = 0
+    failed = 0
+    user_id = client.me.id
+    msg = await message.reply("<code>Processing global broadcast...</code>")
+    list_blchat = await ambil_list_vars(client.me.id, "BL_ID")
+    async for dialog in client.get_dialogs():
+        if dialog.chat.type in [ChatType.GROUP, ChatType.SUPERGROUP]:
+            if message.reply_to_message:
+                send = message.reply_to_message
+            elif len(message.command) < 2:
+                return await msg.edit("<code>Berikan pesan atau balas pesan...</code>")
+            else:
+                send = message.text.split(None, 1)[1]
+            chat_id = dialog.chat.id
+            if chat_id not in list_blchat and chat_id not in BLACKLIST_CHAT:
+                try:
+                    if message.reply_to_message:
+                        await send.copy(chat_id)
+                    else:
+                        await client.send_message(chat_id, send)
+                    sent += 1
+                    await asyncio.sleep(1)
+                except Exception:
+                    failed += 1
+                    await asyncio.sleep(1)
+    await msg.edit(f"**✅ Berhasil Terkirim: `{sent}` \n❌ Gagal Terkirim: `{failed}`**")
+
+@CB.UBOT("uc")
+async def broadcast_users_cmd(client, message):
+    msg = await message.reply(emoji("proses") + f"sᴇᴅᴀɴɢ ᴍᴇᴍᴘʀᴏsᴇs ᴍᴏʜᴏɴ ʙᴇʀsᴀʙᴀʀ...")
+
+    send = get_message(message)
+    if not send:
+        return await msg.edit(emoji("gagal") + f"ᴍᴏʜᴏɴ ʙᴀʟᴀs sᴇsᴜᴀᴛᴜ ᴀᴛᴀᴜ ᴋᴇᴛɪᴋ sᴇsᴜᴀᴛᴜ!.")
+
+    chats = await get_broadcast_id(client, "users")
+
+    done = 0
+    for chat_id in chats:
+        if chat_id == client.me.id:
+            continue
+        
+
+        try:
+            if message.reply_to_message:
+                await send.copy(chat_id)
+            else:
+                await client.send_message(chat_id, send)
+            done += 1
+        except FloodWait as e:
+            await asyncio.sleep(e.value)
+            if message.reply_to_message:
+                await send.copy(chat_id)
+            else:
+                await client.send_message(chat_id, send)
+            done += 1
+        except Exception:
+            pass
+
+    return await msg.edit(f"📊 ᴘᴇsᴀɴ ʙʀᴏᴀᴅᴄᴀsᴛ ᴀɴᴅᴀ ᴛᴇʀᴋɪʀɪᴍ ᴋᴇ `{done}` ɢʀᴏᴜᴘ" + emoji("done"))    
+
+
+@CB.UBOT("send")
+async def send_msg_cmd(client, message):
+    if message.reply_to_message:
+        chat_id = (
+            message.chat.id if len(message.command) < 2 else message.text.split()[1]
+        )
+        try:
+            if client.me.id != bot.me.id:
+                if message.reply_to_message.reply_markup:
+                    x = await client.get_inline_bot_results(
+                        bot.me.username, f"get_send {id(message)}"
+                    )
+                    return await client.send_inline_bot_result(
+                        chat_id, x.query_id, x.results[0].id
+                    )
+        except Exception as error:
+            return await message.reply(error)
+        else:
+            try:
+                return await message.reply_to_message.copy(chat_id)
+            except Exception as t:
+                return await message.reply(f"{t}")
+    else:
+        if len(message.command) < 3:
+            return await message.reply("ketik yang bener")
+        chat_id, chat_text = message.text.split(None, 2)[1:]
+        try:
+            return await client.send_message(chat_id, chat_text)
+        except Exception as t:
+            return await message.reply(f"{t}")
+
+
+@CB.INLINE("^get_send")
+@INLINE.QUERY
+async def send_inline(client, inline_query):
+    _id = int(inline_query.query.split()[1])
+    m = next((obj for obj in get_objects() if id(obj) == _id), None)
+    if m:
+        await client.answer_inline_query(
+            inline_query.id,
+            cache_time=0,
+            results=[
+                InlineQueryResultArticle(
+                    title="get send!",
+                    reply_markup=m.reply_to_message.reply_markup,
+                    input_message_content=InputTextMessageContent(
+                        m.reply_to_message.text
+                    ),
+                )
+            ],
+        )
+
+@CB.INLINE("^gcast_button")
+@INLINE.QUERY
+async def gcast_inline(client, inline_query):
+    get_id = int(inline_query.query.split(None, 1)[1])
+    m = [obj for obj in get_objects() if id(obj) == get_id][0]
+    buttons, text = await gcast_create_button(m)
+    await client.answer_inline_query(
+        inline_query.id,
+        cache_time=0,
+        results=[
+            (
+                InlineQueryResultArticle(
+                    title="get button!",
+                    reply_markup=buttons,
+                    input_message_content=InputTextMessageContent(text),
+                )
+            )
+        ],
+    )

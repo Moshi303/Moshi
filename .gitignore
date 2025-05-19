@@ -1,0 +1,4 @@
+vps
+venv/
+*session*
+__pycache__/
